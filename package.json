@@ -1,0 +1,16 @@
+{
+  "name": "process-list-manager",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "postinstall": "bin/pol.js completion zsh"
+  },
+  "bin": {
+    "pol": "bin/pol.js"
+  },
+  "author": "ui3o.com",
+  "license": "ISC",
+  "dependencies": {
+    "minimist": "^1.2.8"
+  }
+}
