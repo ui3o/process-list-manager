@@ -7,9 +7,9 @@ const argv = require('minimist')(process.argv.slice(2));
 
 module.exports.help = () => {
     printUsage({
-        name: 'pol - Process list controller.',
+        name: 'pol - Process list manager.',
         usage: [
-            { name: `pol [options][command]`, desc: 'container controller accepts command and options.' }
+            { name: `pol [options][command]`, desc: 'container manager accepts command and options.' }
         ],
         options: [
             { desc: 'show help', switch: '-h, --help', type: 'boolean' }
