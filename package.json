@@ -1,10 +1,9 @@
 {
   "name": "process-list-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "",
   "scripts": {
-    "postinstall": "node ./bin/pol.js completion zsh",
-    "posti": "node ./bin/pol.js completion zsh"
+    "build": "node ./bin/pol.js completion zsh"
   },
   "bin": {
     "pol": "./bin/pol.js"
