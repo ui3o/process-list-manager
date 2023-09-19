@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "postinstall": "./bin/pol.js completion zsh"
+    "postinstall": "node ./bin/pol.js completion zsh"
   },
   "bin": {
     "pol": "./bin/pol.js"
