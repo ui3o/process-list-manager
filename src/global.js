@@ -1,13 +1,14 @@
 const { spawn } = require('child_process');
 const { ServicesStates } = require('./states');
 const fs = require('fs');
-const log_file = fs.createWriteStream('debug.log', { flags: 'a' });
+let log_file;
 const cliRuns = {};
 const execRuns = {};
 
 // TODO service state
 process.env.TZ = process.env.TZ ? process.env.TZ : fs.readFileSync('/etc/timezone').toString().split('\n')[0];
 const msgToLog = (message, level = 'outlog', service) => {
+    if (!log_file) log_file = fs.createWriteStream('/var/log/pol/pold.log', { flags: 'a' });
     const log = {
         time: new Date().ISOStrings(),
         level,
