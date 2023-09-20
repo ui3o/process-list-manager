@@ -226,7 +226,7 @@ module.exports.pol = async (argv) => {
                                     srv = servName;
                                     headMsg = `[${term.fc.green} STOP ${term.mc.resetAll}]`;
                                 }
-                                const { c } = await cliSplitByLine('kill', '-9', p.procId);
+                                const { c } = await cliSplitByLine('kill', p.procId);
                                 if (c == 0) {
                                     logger.write(`${headMsg} ${servName} service with proc/pid[${p.procName}/${p.procId}] ...`);
                                 }
