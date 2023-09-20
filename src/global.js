@@ -1,14 +1,54 @@
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+const packageJson = require("../package.json");
 const { ServicesStates } = require('./states');
+const { term } = require('./term');
 const fs = require('fs');
-let log_file;
+let LOG_FILE_ROOT = '/var/log/pol';
+let LOG_FILE_PATH = `${LOG_FILE_ROOT}/pol.log`;
 const cliRuns = {};
 const execRuns = {};
+// log setup
+const TASK_INDENT = `        `;
+const log = {
+    write: console.log,
+    log: console.log,
+    warn: console.warn,
+    err: console.err,
+    end: () => { }
+};
+
+
+// log file setup
+function cli(_cmd) {
+    const cmd = [...arguments];
+    spawnSync(cmd.shift(), [...cmd], { encoding: 'utf-8', stdio: 'ignore' });
+}
+if (!fs.existsSync(LOG_FILE_PATH)) {
+    try {
+        fs.accessSync(LOG_FILE_ROOT, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
+    } catch (error) {
+        log.log(`[${term.fc.red}REQUIRED${term.mc.resetAll}] Please create '/var/log/pol' folder with 'rw' access for the running user!`);
+        process.exit(1);
+    }
+    cli(`touch`, LOG_FILE_PATH);
+}
+// zsh plugin setup
+const polPluginFolder = `${process.env.ZSH}/custom/plugins/pol`;
+const polPluginVersion = `${polPluginFolder}/pol.plugin.${packageJson.version}.version`;
+if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh') && !fs.existsSync(polPluginVersion)) {
+    cli(`mkdir`, `-p`, `${polPluginFolder}`);
+    cli(`touch`, polPluginVersion);
+    cli(`cp`, `${__dirname}/../zsh-plugin/pol.plugin.zsh`, `${polPluginFolder}/pol.plugin.zsh`);
+    cli(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
+    log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
+}
+
+const log_file = fs.createWriteStream(LOG_FILE_PATH, { flags: 'a' });
+
 
 // TODO service state
 process.env.TZ = process.env.TZ ? process.env.TZ : fs.readFileSync('/etc/timezone').toString().split('\n')[0];
 const msgToLog = (message, level = 'outlog', service) => {
-    if (!log_file) log_file = fs.createWriteStream('/var/log/pol/pold.log', { flags: 'a' });
     const log = {
         time: new Date().ISOStrings(),
         level,
@@ -181,17 +221,8 @@ module.exports.cliSplitByLine = function (cmd) {
             res({ o: _lines, c });
         });
     });
-}
-
-// log setup
-const TASK_INDENT = `        `;
-const log = {
-    write: console.log,
-    log: console.log,
-    warn: console.warn,
-    err: console.err,
-    end: () => { }
 };
+
 const logFile = {
     write: msgToLog,
     end: () => { }
@@ -202,6 +233,8 @@ console.error = console["error"].bind(global.console, TASK_INDENT);
 module.exports.TASK_INDENT = TASK_INDENT;
 module.exports.log = log;
 module.exports.logFile = logFile;
+
+
 
 // Date overrides
 Date.prototype.ISOStrings = function () {

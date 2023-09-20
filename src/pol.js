@@ -152,6 +152,7 @@ module.exports.pol = async (argv) => {
                 let serviceStartResolver;
                 const serv = global[service.name];
                 promiseAllService.push(new Promise(r => serviceStartResolver = r));
+                ServicesStates.init(service.name);
 
                 try {
                     if (serv.onLogin && service.name === LoginServiceName) {
@@ -220,7 +221,6 @@ module.exports.pol = async (argv) => {
                                 if (c == 0) {
                                     logger.write(`${headMsg} ${servName} service with proc/pid[${p.procName}/${p.procId}] ...`);
                                 }
-                                ServicesStates.init(servName);
                             }
                         }
                     }
@@ -317,7 +317,6 @@ module.exports.pol = async (argv) => {
                     await cliSplitByLine(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
                     log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
                 }
-                log.log(`[${term.fc.red}REQUIRED${term.mc.resetAll}] Please create '/var/log/pol' folder with 'rw' access for the running user!`);
             }
             break;
         case "ps":

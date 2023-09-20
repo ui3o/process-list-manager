@@ -1,10 +1,7 @@
 {
   "name": "process-list-manager",
-  "version": "1.0.3",
-  "description": "",
-  "scripts": {
-    "build": "node ./bin/pol.js completion zsh"
-  },
+  "version": "1.0.4",
+  "description": "Nodejs based init system called process list manager - pol",
   "bin": {
     "pol": "./bin/pol.js"
   },

@@ -3,14 +3,14 @@ const { msgToLog, log } = require('./global');
 const net = require('net');
 const fs = require('fs');
 const connections = {};
-const toLog = (msg) => { msgToLog(msg, ' pold ') }
+const toLog = (msg) => { msgToLog(msg, 'pol   ') }
 var server, client;
 
 // prevent duplicate exit messages
 var SHUTDOWN = false;
 
 // Our socket
-const SOCKETFILE = '/tmp/pold.sock';
+const SOCKETFILE = '/tmp/pol.sock';
 
 function serverCreate(socket, onMsg = async (msg, stream) => { }) {
     toLog('Socket server: creating');
