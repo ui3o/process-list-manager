@@ -118,7 +118,7 @@ module.exports.pol = async (argv) => {
         }
     }
 
-    const stopRunChecker = (serviceName, stage, logger) => {
+    const stopRunChecker = (serviceName, stage) => {
         const onStage = `on${stage}`, afterStage = `after${stage}`;
 
         if (Intervals[serviceName] && (Intervals[serviceName][onStage] || Intervals[serviceName][afterStage])) {
@@ -127,6 +127,7 @@ module.exports.pol = async (argv) => {
 
             if (onInterval) {
                 onInterval.id = clearInterval(onInterval.id);
+                if (global[serviceName].serviceStartResolver) global[serviceName].serviceStartResolver();
             }
             if (afterInterval) {
                 afterInterval.id = clearInterval(afterInterval.id);
@@ -152,6 +153,7 @@ module.exports.pol = async (argv) => {
                 let serviceStartResolver;
                 const serv = global[service.name];
                 promiseAllService.push(new Promise(r => serviceStartResolver = r));
+                serv.serviceStartResolver = serviceStartResolver;
                 ServicesStates.init(service.name);
 
                 try {
@@ -160,6 +162,7 @@ module.exports.pol = async (argv) => {
                     }
                     if (RunningServices.some(srvName => srvName === service.name)) {
                         logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${service.name} is already running ...`);
+                        serviceStartResolver();
                         continue;
                     }
                     if (serv.onStart) {
@@ -198,9 +201,15 @@ module.exports.pol = async (argv) => {
             logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${serviceName} is already stopped ...`);
             return;
         }
+        ServicesStates.setDownState(serviceName);
+        if (serviceName === '--all') {
+            for (const srv of ServiceList) {
+                ServicesStates.setDownState(srv.name);
+            }
+        }
+
         const promiseAllService = [];
         return new Promise(async (resolve) => {
-            // todo a service-en kell menni nem a running process-en
             for (const servName of RunningServices) {
                 if (serviceName === '--all' || serviceName === servName) {
                     let serviceStopResolver, preStopResolver, postStopResolver;
@@ -211,13 +220,13 @@ module.exports.pol = async (argv) => {
                         let srv = "";
                         for (const p of RunningProcesses) {
                             if (p.serviceName === servName) {
-                                ServicesStates.setDownState(servName);
+                                stopRunChecker(servName, 'Start');
                                 let headMsg = TASK_INDENT;
                                 if (srv !== servName) {
                                     srv = servName;
                                     headMsg = `[${term.fc.green} STOP ${term.mc.resetAll}]`;
                                 }
-                                const { c } = await cliSplitByLine('kill', p.procId);
+                                const { c } = await cliSplitByLine('kill', '-9', p.procId);
                                 if (c == 0) {
                                     logger.write(`${headMsg} ${servName} service with proc/pid[${p.procName}/${p.procId}] ...`);
                                 }
@@ -228,11 +237,11 @@ module.exports.pol = async (argv) => {
                     StoppedServices = StoppedServices.filter(s => s.name !== servName);
                     try {
                         if (serv.onStop) {
-                            new Promise(r => serv.ssOnStop.stopAll = r).then(async () => {
+                            serv.ssOnStop.stopAll = async () => {
                                 // TODO handle if has pre started cli
+                                await _stop();
                                 startRunChecker(servName, 'after', 'onStop', 'stopped', logger, postStopResolver);
-                                return _stop();
-                            });
+                            };
                             serv.onStop(serv.ssOnStop);
                             startRunChecker(servName, 'before', 'onStop', 'stopped', logger, preStopResolver);
                         } else {
@@ -241,7 +250,6 @@ module.exports.pol = async (argv) => {
                         }
 
                         Promise.all(promiseAllPrePostStopDone).then(() => {
-                            stopRunChecker(servName, 'Start', logger);
                             serviceStopResolver();
                         });
                     } catch (error) {
@@ -269,43 +277,62 @@ module.exports.pol = async (argv) => {
                 process.exit(1);
             }
             await serverCreate(async (msg, socket) => {
+
                 switch (msg._[0]) {
                     case "stop":
-                        await lookup();
-                        await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        if (!msg._.length || (msg._.length < 2 && !msg.all)) {
+                            socket.write(POSSIBLE_OPTIONS_MSG);
+                            socket.end();
+                        } else {
+                            await lookup();
+                            await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        }
                         break;
                     case "start":
-                        await lookup();
-                        await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        if (!msg._.length || (msg._.length < 2 && !msg.all)) {
+                            socket.write(POSSIBLE_OPTIONS_MSG);
+                            socket.end();
+                        } else {
+                            await lookup();
+                            await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        }
                         break;
                     case "restart":
-                        await lookup();
-                        const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, false);
-                        if (success) await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        if (!msg._.length || (msg._.length < 2 && !msg.all)) {
+                            socket.write(POSSIBLE_OPTIONS_MSG);
+                            socket.end();
+                        } else {
+                            await lookup();
+                            const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, false);
+                            if (success) await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                        }
                         break;
                 }
             });
             await start("--all", log);
             if (LoginService && LoginService.onLogin) {
-                process.env = {
-                    ...envs,
-                    POL: `__POL__${LoginService.name}__${new Date().getTime()}__POL__`
-                };
-                LoginService.onLogin(LoginService.ssOnLogin);
                 const logout = async () => {
                     // only stop process if there was login
                     await lookup();
                     await stop("--all", log);
                     serverCleanup();
                 }
-                if (execRuns[LoginService.name]['onLogin']) {
-                    execRuns[LoginService.name]['onLogin'].promise.then(async () => {
-                        await logout();
-                    });
-                } else {
+                if (ServicesStates.isDownState(LoginService.name))
                     await logout();
+                else {
+                    process.env = {
+                        ...envs,
+                        POL: `__POL__${LoginService.name}__${new Date().getTime()}__POL__`
+                    };
+                    LoginService.onLogin(LoginService.ssOnLogin);
+                    if (execRuns[LoginService.name]['onLogin']) {
+                        execRuns[LoginService.name]['onLogin'].promise.then(async () => {
+                            await logout();
+                        });
+                    } else {
+                        await logout();
+                    }
                 }
-
             }
             break;
         case "completion":
@@ -325,7 +352,7 @@ module.exports.pol = async (argv) => {
                 let headMsg = TASK_INDENT;
                 if (srv !== p.serviceName) {
                     srv = p.serviceName;
-                    headMsg = `[${term.fc.green} RUN ${term.mc.resetAll}]`;
+                    headMsg = `[${term.fc.green} RUN ${term.mc.resetAll}] `;
                 }
                 log.log(headMsg, p.serviceName, `service with proc/pid[${p.procName}/${p.procId}] ...`);
                 StoppedServices = StoppedServices.filter(s => s.name !== p.serviceName);
