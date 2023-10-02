@@ -1,10 +1,16 @@
 
-const { msgToLog, log } = require('./global');
-const net = require('net');
-const fs = require('fs');
-const connections = {};
-const toLog = (msg) => { msgToLog(msg, 'pol   ') }
-var server, client;
+import fs from 'fs';
+import minimist from 'minimist';
+import net from 'net';
+import { log } from './global';
+import { msgToLog } from './logger';
+
+const connections: {
+    [name: string]: net.Socket
+
+} = {};
+const toLog = (msg: string) => { msgToLog(msg, 'pol   ') }
+var server: net.Server, client: net.Socket;
 
 // prevent duplicate exit messages
 var SHUTDOWN = false;
@@ -12,25 +18,25 @@ var SHUTDOWN = false;
 // Our socket
 const SOCKETFILE = '/tmp/pol.sock';
 
-function serverCreate(socket, onMsg = async (msg, stream) => { }) {
+function _serverCreate(socket: string, onMsg = async (msg: minimist.ParsedArgs, stream: net.Socket) => { }) {
     toLog('Socket server: creating');
     let sock;
-    return new Promise((resolve) => {
+    return new Promise((resolve: any) => {
         server = net.createServer(function (stream) {
             toLog('Socket server: connection acknowledged');
             // Store all connections so we can terminate them if the server closes.
             // An object is better than an array for these.
-            var self = Date.now();
-            connections[self] = (stream);
+            var self = (Date.now()).toString();
+            connections[self] = stream;
             stream.on('end', function () {
                 toLog('Socket server: client disconnected');
                 delete connections[self];
             });
 
             // Messages are buffers. use toString
-            stream.on('data', async (msg) => {
-                msg = JSON.parse(msg.toString());
-                onMsg(msg, connections[self]);
+            stream.on('data', async (msg: string) => {
+                const _msg: minimist.ParsedArgs = JSON.parse(msg.toString());
+                onMsg(_msg, connections[self]);
                 // stream.write('qux'); // need to be call in place, can not reference to write function
             });
         }).listen(socket).on('connection', function (_socket) {
@@ -42,14 +48,14 @@ function serverCreate(socket, onMsg = async (msg, stream) => { }) {
     });
 }
 
-module.exports.serverCleanup = () => {
+export const serverCleanup = () => {
     if (!SHUTDOWN && server) {
         SHUTDOWN = true;
         toLog("Socket server: terminating");
         if (Object.keys(connections).length) {
             let clients = Object.keys(connections);
             while (clients.length) {
-                let client = clients.pop();
+                let client = clients.pop() as string;
                 //connections[client].write('__disconnect'); // send to client immediately before disconnect
                 connections[client].end();
             }
@@ -57,7 +63,7 @@ module.exports.serverCleanup = () => {
         server.close();
     }
 }
-module.exports.serverCreate = async (onMsg = async (msg, stream) => { }) => {
+export const serverCreate = async (onMsg = async (msg: minimist.ParsedArgs, stream: net.Socket) => { }) => {
     // check for failed cleanup
     toLog('Socket server: checking for leftover socket');
 
@@ -65,15 +71,15 @@ module.exports.serverCreate = async (onMsg = async (msg, stream) => { }) => {
         toLog('Socket server: removing leftover socket.');
         fs.unlinkSync(SOCKETFILE);
     } else {
-        toLog('Socket server: no leftover socket found.');
+        toLog('Socket sestringrver: no leftover socket found.');
     }
     // close all connections when the user does CTRL-C
-    process.on('exit', module.exports.serverCleanup);
-    return serverCreate(SOCKETFILE, onMsg);
+    process.on('exit', serverCleanup);
+    return _serverCreate(SOCKETFILE, onMsg);
 }
 
 
-module.exports.clientCleanup = () => {
+export const clientCleanup = () => {
     if (!SHUTDOWN && client) {
         SHUTDOWN = true;
         toLog("Socket client: Terminating.");
@@ -81,20 +87,20 @@ module.exports.clientCleanup = () => {
     }
 }
 
-module.exports.clientCreate = () => {
+export const clientCreate = () => {
     // Connect to server.
     // log.log("Socket client: connecting to server");
-    process.on('exit', module.exports.clientCleanup);
-    return new Promise((resolve) => {
+    process.on('exit', clientCleanup);
+    return new Promise<net.Socket>((resolve) => {
         client = net.createConnection(SOCKETFILE)
             .on('connect', () => {
                 // log.log("Socket client: connected");
                 resolve(client);
             })
             // Messages are buffers. use toString
-            .on('data', function (data) {
-                data = data.toString();
-                log.log(data);
+            .on('data', function (data: Buffer) {
+                const dataStr = data.toString();
+                log.log(dataStr);
                 // if (data === '__boop') {
                 //     client.write('__snootbooped');
             })

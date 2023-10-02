@@ -1,4 +1,4 @@
-const  {term}  = require('./term');
+import { term } from './term';
 
 const USAGE = {
     name: 'NAME\n',
@@ -16,7 +16,7 @@ const _get = (prop = '') => {
     return prop !== undefined && prop.length ? prop : undefined;
 }
 
-const _printTitles = (title, info = [], bold) => {
+const _printTitles = (title: string, info: Array<any> = [], bold?: boolean) => {
     if (info.length && _get(info[0].name)) {
         term.print(term.mc.bold + USAGE.header + title);
 
@@ -36,9 +36,9 @@ const _printTitles = (title, info = [], bold) => {
 }
 
 // type: [boolean|string|number]
-module.exports.printUsage = (u = {
+export const printUsage = (u = {
     name: '', usage: [{ name: '', desc: '' }], options: [{ switch: '', desc: '', type: '' }],
-    commands: [{ switch: '', desc: ''}],
+    commands: [{ switch: '', desc: '' }],
     copyright: 'copyright@2020', version: '0.0.1'
 }) => {
     _printTitles(USAGE.name, [{ name: u.name }]);

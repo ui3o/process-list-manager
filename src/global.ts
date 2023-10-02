@@ -1,25 +1,24 @@
-const { spawn, spawnSync } = require('child_process');
-const packageJson = require("../package.json");
-const { ServicesStates } = require('./states');
-const { term } = require('./term');
-const fs = require('fs');
-let LOG_FILE_ROOT = '/var/log/pol';
-let LOG_FILE_PATH = `${LOG_FILE_ROOT}/pol.log`;
-const cliRuns = {};
-const execRuns = {};
+import { spawn, spawnSync } from 'child_process';
+import fs from 'fs';
+import packageJson from "../package.json";
+import { POL_LOGGER, POL_SETUP, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
+import { LOG_FILE_PATH, LOG_FILE_ROOT, msgToLog } from './logger';
+import { term } from './term';
+
+
 // log setup
-const TASK_INDENT = `        `;
-const log = {
+export const TASK_INDENT = `        `;
+export const log: POL_LOGGER = {
     write: console.log,
     log: console.log,
     warn: console.warn,
-    err: console.err,
+    err: console.error,
     end: () => { }
 };
 
 
 // log file setup
-function cli(_cmd) {
+function cli(...args: string[]) {
     const cmd = [...arguments];
     spawnSync(cmd.shift(), [...cmd], { encoding: 'utf-8', stdio: 'ignore' });
 }
@@ -32,6 +31,7 @@ if (!fs.existsSync(LOG_FILE_PATH)) {
     }
     cli(`touch`, LOG_FILE_PATH);
 }
+
 // zsh plugin setup
 const polPluginFolder = `${process.env.ZSH}/custom/plugins/pol`;
 const polPluginVersion = `${polPluginFolder}/pol.plugin.${packageJson.version}.version`;
@@ -43,38 +43,27 @@ if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh') && !fs.existsSync(
     log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
 }
 
-const log_file = fs.createWriteStream(LOG_FILE_PATH, { flags: 'a' });
-
-
 // TODO service state
 process.env.TZ = process.env.TZ ? process.env.TZ : fs.readFileSync('/etc/timezone').toString().split('\n')[0];
-const msgToLog = (message, level = 'outlog', service) => {
-    const log = {
-        time: new Date().ISOStrings(),
-        level,
-        service,
-        message
-    }
-    log_file.write(`${JSON.stringify(log)}\n`);
-}
+
 
 // generate standard cli and toLog objects
-const cliGenerator = (controller, bindObject, type) => {
+const cliGenerator = (controller: POL_SETUP_START | POL_SETUP_STOP, bindObject: any, type: any) => {
     Object.defineProperty(controller.cli, 'noErr', {
-        get: function () { global.service.__prop__.noErr = true; return controller.cli; }
+        get: function () { globalThis.service.__prop__.noErr = true; return controller.cli; }
     });
     Object.defineProperty(controller.cli, 'splitByLine', {
-        get: function () { global.service.__prop__.splitByLine = true; return controller.cli; }
+        get: function () { globalThis.service.__prop__.splitByLine = true; return controller.cli; }
     });
     Object.defineProperty(controller.cli, 'splitAll', {
-        get: function () { global.service.__prop__.splitAll = true; return controller.cli; }
+        get: function () { globalThis.service.__prop__.splitAll = true; return controller.cli; }
     });
-    controller.cli.wd = (wd = '') => { global.service.__prop__.cwd = wd; return controller.cli; };
-    controller.cli.eol = (eol = '') => { global.service.__prop__.eol = eol; return controller.cli; };
-    controller.cli.do = function (_cmd) {
-        return cliDo([...arguments], this)
+    controller.cli.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.cli; };
+    controller.cli.eol = (eol = '') => { globalThis.service.__prop__.eol = eol; return controller.cli; };
+    controller.cli.do = function () {
+        return cliDo([...arguments], (this as POL_SETUP).serviceName!)
     }
-    controller.toLog = function (str) {
+    controller.toLog = function (str: string) {
         msgToLog(str);
     }
     // bind service name
@@ -83,70 +72,68 @@ const cliGenerator = (controller, bindObject, type) => {
 }
 
 // generate standard exec and toLog objects
-const execGenerator = (controller, bindObject, type) => {
+const execGenerator = (controller: POL_SETUP_START, bindObject: any, type: any) => {
     Object.defineProperty(controller.exec, 'it', {
-        get: function () { global.service.__prop__.it = true; return controller.exec; }
+        get: function () { globalThis.service.__prop__.it = true; return controller.exec; }
     });
 
-    controller.exec.wd = (wd = '') => { global.service.__prop__.cwd = wd; return controller.exec; };
-    controller.exec.do = function (_cmd) {
-        return execDo([...arguments], this)
+    controller.exec.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.exec; };
+    controller.exec.do = function () {
+        return execDo([...arguments], (this as POL_SETUP).serviceName!)
     }
     // bind service name
     controller.exec.do = controller.exec.do.bind({ ...bindObject, type, controller });
 }
 
-const execDo = (cmd, setup) => {
+const execDo = (cmd: string[], serviceName: string) => {
     const prog = cmd.shift();
     const params = [...cmd];
-    const timestamp = new Date().getTime();
-    const caller = new Error().stack.split("at ")[3].split(' ')[0].split('.')[1];
-    let options = { ...global.service.__prop__ };
-    global.service.__prop__ = {};
+    const timestamp = pol.getNanoSecTime();
+    const funcName = new Error().stack?.split("at ")[3].split(' ')[0].split('.')[1];
+    let options = { ...globalThis.service.__prop__ };
+    globalThis.service.__prop__ = {};
     const env = {
         ...process.env,
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__EXEC__POL_CL__`
     }
 
     //  todo multiple exec not allowed
-    const spawnCmd = spawn(prog, params, { encoding: 'utf-8', cwd: options.cwd, env, stdio: options.it ? 'inherit' : undefined });
+    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env, stdio: options.it ? 'inherit' : undefined });
     const promise = new Promise(res => {
         if (!options.it) {
-            spawnCmd.stdout.on('data', data => {
+            spawnCmd.stdout?.on('data', data => {
                 msgToLog(data, 'outexe');
             });
-            spawnCmd.stderr.on('data', data => {
+            spawnCmd.stderr?.on('data', data => {
                 msgToLog(data, 'errexe');
             });
         }
         spawnCmd.on('close', (c) => {
-            delete execRuns[setup.name][caller];
+            pol.delExec(serviceName, funcName!, timestamp);
             res(c);
         });
     });
-    execRuns[setup.name] = { onStart: {}, onStop: {}, onLogin: {}, ...execRuns[setup.name] };
-    execRuns[setup.name][caller] = { prog, params, promise, options, timestamp };
+    pol.addExec(serviceName, funcName!, timestamp, { prog, params, promise, options, timestamp })
     return promise;
 }
 
-const cliDo = (cmd, setup) => {
-    const lines = [];
+const cliDo = (cmd: string[], serviceName: string) => {
+    const lines: string[][] = [];
     const prog = cmd.shift();
     const params = [...cmd];
-    const timestamp = new Date().getTime();
-    const caller = new Error().stack.split("at ")[3].split(' ')[0].split('.')[1];
-    let options = { ...global.service.__prop__ };
-    global.service.__prop__ = {};
+    const timestamp = pol.getNanoSecTime();
+    const funcName = new Error().stack?.split("at ")[3].split(' ')[0].split('.')[1];
+    let options = { ...globalThis.service.__prop__ };
+    globalThis.service.__prop__ = {};
     const env = {
         ...process.env,
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__CLI__POL_CL__`
     }
-    if (ServicesStates.isDownState(setup.name) && caller === "onStart")
+    if (pol.isStateDown(serviceName) && funcName === "onStart")
         return Promise.resolve();
-    const spawnCmd = spawn(prog, params, { encoding: 'utf-8', cwd: options.cwd, env });
-    cliRuns[setup.name] = { onStart: {}, onStop: {}, onLogin: {}, ...cliRuns[setup.name] };
+    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env });
     // cliRuns[setup.type][timestamp] = { prog, params };
-    cliRuns[setup.name][caller][timestamp] = { prog, params };
+    pol.addCli(serviceName, funcName!, timestamp, { prog, params });
     return new Promise(res => {
         let _out = '';
         spawnCmd.stdout.on('data', data => {
@@ -155,9 +142,10 @@ const cliDo = (cmd, setup) => {
         spawnCmd.stderr.on('data', data => {
             if (!options.noErr) _out += data;
         });
+
         spawnCmd.on('close', (c) => {
             // delete cliRuns[setup.type][timestamp];
-            delete cliRuns[setup.name][caller][timestamp];
+            pol.delCli(serviceName, funcName!, timestamp);
             if (options.splitAll || options.splitByLine) {
                 const _lines = _out.split(options.eol ? options.eol : '\n').filter(l => l);
                 if (options.splitByLine) res({ o: _lines, c });
@@ -172,43 +160,49 @@ const cliDo = (cmd, setup) => {
     });
 }
 
-global.service = {
-    set setup(setup) {
-        const _setup = {
+export interface CustomGlobal {
+    service: any;
+}
+
+declare const globalThis: {
+    service: any;
+};
+
+
+globalThis.service = {
+    set setup(setup: POL_SETUP) {
+        const _setup: POL_SETUP = {
             ...setup,
-            name: (new Error().stack.split("at ")[2]).trim().split('.js:')[0].replace(/.*\//, ''),
+            serviceName: (new Error().stack?.split("at ")[2])?.trim().split('.js:')[0].replace(/.*\//, ''),
             ssOnStart: {
                 cli: {},
                 exec: {}
             },
             ssOnStop: {
-                cli: {}
+                cli: {},
             },
             ssOnLogin: {
                 cli: {},
                 exec: {}
             }
         }
-        // extend _setup 
+        // extend _setup
         cliGenerator(_setup.ssOnStart, _setup, "start");
         cliGenerator(_setup.ssOnStop, _setup, "stop");
         cliGenerator(_setup.ssOnLogin, _setup, "login");
         execGenerator(_setup.ssOnStart, _setup, "start");
         execGenerator(_setup.ssOnLogin, _setup, "login");
-        ServicesStates.init(_setup.name);
-        global[_setup.name] = _setup;
+        pol.stateInit(_setup.serviceName!);
+        pol.setSetup(_setup.serviceName!, _setup);
     },
     __prop__: {},
 }
 
-module.exports.cliRuns = cliRuns;
-module.exports.execRuns = execRuns;
-module.exports.msgToLog = msgToLog;
-module.exports.cliSplitByLine = function (cmd) {
+export const cliSplitByLine = function (...args: any[]) {
     const _cmd = [...arguments];
 
-    const spawnCmd = spawn(_cmd.shift(), [..._cmd], { encoding: 'utf-8' });
-    return new Promise(res => {
+    const spawnCmd = spawn(_cmd.shift(), [..._cmd]);
+    return new Promise<{ o: string[], c: number }>(res => {
         let _out = '';
         spawnCmd.stdout.on('data', data => {
             _out += data;
@@ -216,31 +210,36 @@ module.exports.cliSplitByLine = function (cmd) {
         spawnCmd.stderr.on('data', data => {
             _out += data;
         });
-        spawnCmd.on('close', (c) => {
+        spawnCmd.on('close', (c: number) => {
             const _lines = _out.split('\n').filter(l => l);
             res({ o: _lines, c });
         });
     });
 };
 
-const logFile = {
+export const logFile: POL_LOGGER = {
     write: msgToLog,
+    log: () => { },
+    warn: () => { },
+    err: () => { },
     end: () => { }
 };
+
 console.log = console["log"].bind(global.console, TASK_INDENT);
 console.warn = console["warn"].bind(global.console, TASK_INDENT);
 console.error = console["error"].bind(global.console, TASK_INDENT);
-module.exports.TASK_INDENT = TASK_INDENT;
-module.exports.log = log;
-module.exports.logFile = logFile;
 
-
+declare global {
+    interface Date {
+        ISOStrings: () => string
+    }
+}
 
 // Date overrides
 Date.prototype.ISOStrings = function () {
     const tzo = -this.getTimezoneOffset();
     const dif = tzo >= 0 ? '+' : '-';
-    const pad = function (num) {
+    const pad = function (num: number) {
         return (num < 10 ? '0' : '') + num;
     };
     const zone = dif + pad(Math.floor(Math.abs(tzo) / 60)) + ':' + pad(Math.abs(tzo) % 60)
