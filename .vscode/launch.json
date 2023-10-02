@@ -75,6 +75,23 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "ps --all",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "POL_CONFIG_FOLDER": "${workspaceFolder}/test"
+            },
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/ts-node",
+            "runtimeArgs": ["${workspaceFolder}/entry/pol.ts"],
+            "args": ["ps","--all"],
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "test",
             "skipFiles": [
                 "<node_internals>/**"

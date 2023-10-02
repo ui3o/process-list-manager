@@ -121,7 +121,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
     }
 
     // stop process implementation
-    const stop = async (serviceName: string | null, logger: POL_LOGGER | net.Socket) => {
+    const stop = async (serviceName: string | null, logger: POL_LOGGER | net.Socket, force?: boolean) => {
         if (!pol.getServices().some(s => s.name === serviceName || serviceName === '--all')) {
             logger.write(POSSIBLE_OPTIONS_MSG);
             return;
@@ -158,7 +158,8 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                                 srv = service.name;
                                 headMsg = `[${term.fc.green} STOP ${term.mc.resetAll}]`;
                             }
-                            const { c } = await cliSplitByLine('kill', p.procId);
+                            const kill = force ? ['kill', '-9', p.procId] : ['kill', p.procId];
+                            const { c } = await cliSplitByLine(...kill);
                             if (c == 0) {
                                 logger.write(`${headMsg} ${service.name} service with proc/pid[${p.procName}/${p.procId}] ...`);
                             }
@@ -219,7 +220,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             socket.end();
                         } else {
                             await lookup();
-                            await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                            await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, msg.force);
                             socket.end();
                         }
                         break;
@@ -239,7 +240,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             socket.end();
                         } else {
                             await lookup();
-                            const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                            const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, msg.force);
                             if (success) await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
                             socket.end();
                         }

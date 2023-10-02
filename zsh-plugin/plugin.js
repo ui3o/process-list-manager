@@ -26,6 +26,7 @@ const menu = {
     },
     "stop__stop service": {
         "--all__stop all service": null,
+        "--force__force stop, send SIGKILL": null,
         ...services
     },
     "restart__restart service": {
