@@ -139,7 +139,7 @@ class PolDaemonClass {
             processes: [],
             path,
             name: serviceName,
-            state: 0,
+            state: this.SERVICE_STATE.READY.state,
             interval: {
                 before_onStart: undefined,
                 after_onStart: undefined,
@@ -159,7 +159,6 @@ class PolDaemonClass {
                 onLogin: undefined
             }
         };
-        this.srv[serviceName].state = 0;
         this.srv[serviceName].processes = [];
         return this.srv[serviceName];
     }
@@ -291,13 +290,19 @@ class PolDaemonClass {
         return this.srv[serviceName];
     }
 
-    isStateDown(serviceName: string) {
-        return this.srv[serviceName].state === this.SERVICE_STATE.DOWN.state;
+    isStateAfterDown(serviceName: string) {
+        return this.srv[serviceName].state >= this.SERVICE_STATE.DOWN.state;
     }
 
     isStateStop(serviceName: string) {
         return this.srv[serviceName].state === this.SERVICE_STATE.STOP.state;
     }
+
+
+    setStateReady(serviceName: string) {
+        this.srv[serviceName].state = this.SERVICE_STATE.READY.state;
+    }
+
 
     setStateDown(serviceName: string) {
         this.srv[serviceName].state = this.SERVICE_STATE.DOWN.state;

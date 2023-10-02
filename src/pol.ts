@@ -182,6 +182,10 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
 
                         Promise.all(promiseAllPrePostStopDone).then(() => {
                             serviceStopResolver();
+                            // set ready state for the next circle
+                            setTimeout(() => {
+                                pol.setStateReady(srv.name);
+                            });
                         });
                     } catch (error) {
                         logger.write(`[${term.fc.red}FAILED${term.mc.resetAll}] stop ${srv.name} ...`);
@@ -250,7 +254,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                     await stop("--all", log);
                     serverCleanup();
                 }
-                if (pol.isStateDown(pol.getLoginService()?.name!))
+                if (pol.isStateAfterDown(pol.getLoginService()?.name!))
                     await logout();
                 else {
                     process.env = {

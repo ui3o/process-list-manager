@@ -97,7 +97,9 @@ const execDo = (cmd: string[], serviceName: string) => {
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__EXEC__POL_CL__`
     }
 
-    //  todo multiple exec not allowed
+    //  multiple exec not allowed
+    if (pol.isStateAfterDown(serviceName) || pol.get(serviceName).exec[funcName! as 'onStart' | 'onLogin'])
+        return Promise.resolve();
     const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env, stdio: options.it ? 'inherit' : undefined });
     const promise = new Promise(res => {
         if (!options.it) {
@@ -129,7 +131,7 @@ const cliDo = (cmd: string[], serviceName: string) => {
         ...process.env,
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__CLI__POL_CL__`
     }
-    if (pol.isStateDown(serviceName) && funcName === "onStart")
+    if (pol.isStateAfterDown(serviceName) && funcName != "onStop")
         return Promise.resolve();
     const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env });
     // cliRuns[setup.type][timestamp] = { prog, params };
