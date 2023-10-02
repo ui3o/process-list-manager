@@ -57,7 +57,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
 
         // require all service file
         // @ts-ignore
-        const dynamicRequire = (typeof __webpack_require__==='function')?__non_webpack_require__:require
+        const dynamicRequire = (typeof __webpack_require__ === 'function') ? __non_webpack_require__ : require
         for (const service of pol.getServices()) {
             dynamicRequire(service.path!);
         }
@@ -71,7 +71,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
     await lookup();
 
     // start process implementation
-    const start = async (serviceName: string | null, logger: POL_LOGGER | net.Socket, endLogger = true) => {
+    const start = async (serviceName: string | null, logger: POL_LOGGER | net.Socket) => {
         if (!serviceName) return;
         if (!pol.getServices().some(s => s.name === serviceName || serviceName === "--all")) {
             logger.write(POSSIBLE_OPTIONS_MSG);
@@ -115,7 +115,6 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                 }
             }
             Promise.all(promiseAllService).then(() => {
-                logger.end();
                 resolve(true);
             });
         });
@@ -131,11 +130,12 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
             logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${serviceName} is already stopped ...`);
             return;
         }
-        pol.setStateDown(serviceName!);
         if (serviceName === '--all') {
             for (const srv of pol.getServices()) {
                 pol.setStateDown(srv.name);
             }
+        } else {
+            pol.setStateDown(serviceName!);
         }
 
         const promiseAllService: Promise<any>[] = [];
@@ -151,18 +151,16 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
 
                     const _stop = async (service: SERVICE_DEF) => {
                         let srv = "";
+                        pol.stopRunChecker(service.name, 'Start');
                         for (const p of service.processes) {
-                            if (service.name === srv) {
-                                pol.stopRunChecker(srv, 'Start');
-                                let headMsg = TASK_INDENT;
-                                if (srv !== srv) {
-                                    srv = srv;
-                                    headMsg = `[${term.fc.green} STOP ${term.mc.resetAll}]`;
-                                }
-                                const { c } = await cliSplitByLine('kill', p.procId);
-                                if (c == 0) {
-                                    logger.write(`${headMsg} ${srv} service with proc/pid[${p.procName}/${p.procId}] ...`);
-                                }
+                            let headMsg = TASK_INDENT;
+                            if (srv !== service.name) {
+                                srv = service.name;
+                                headMsg = `[${term.fc.green} STOP ${term.mc.resetAll}]`;
+                            }
+                            const { c } = await cliSplitByLine('kill', p.procId);
+                            if (c == 0) {
+                                logger.write(`${headMsg} ${service.name} service with proc/pid[${p.procName}/${p.procId}] ...`);
                             }
                         }
                     }
@@ -197,7 +195,6 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                 }
             }
             Promise.all(promiseAllService).then(() => {
-                logger.end();
                 resolve();
             });
         });
@@ -219,6 +216,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                         } else {
                             await lookup();
                             await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                            socket.end();
                         }
                         break;
                     case "start":
@@ -228,6 +226,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                         } else {
                             await lookup();
                             await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                            socket.end();
                         }
                         break;
                     case "restart":
@@ -238,6 +237,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             await lookup();
                             const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
                             if (success) await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                            socket.end();
                         }
                         break;
                 }

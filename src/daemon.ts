@@ -191,6 +191,8 @@ class PolDaemonClass {
 
         if (Object.keys(cli).length) {
             setTimeout(runChecker, 500)
+        } else {
+            if (resolver) resolver();
         }
     }
 
@@ -310,7 +312,7 @@ class PolDaemonClass {
     }
 
     getAllStopped() {
-        return this.getServices().filter(s => s.running)
+        return this.getServices().filter(s => !s.running)
     }
 
     getServices() {
