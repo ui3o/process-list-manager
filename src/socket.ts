@@ -39,6 +39,9 @@ function _serverCreate(socket: string, onMsg = async (msg: minimist.ParsedArgs, 
                 onMsg(_msg, connections[self]);
                 // stream.write('qux'); // need to be call in place, can not reference to write function
             });
+            stream.on('error', async (exc: any) => {
+               delete connections[self];
+            });
         }).listen(socket).on('connection', function (_socket) {
             toLog('Socket server: client connected');
             sock = _socket;
