@@ -16,7 +16,7 @@ jobs:
           npm run build
           npm --no-git-tag-version -f --allow-same-version version from-git
           git add .
-          git commit -m "update version to: ${{  github.ref_name }}"
+          git commit --allow-empty -m "update version to: ${{  github.ref_name }}"
           git push origin HEAD:main
           git tag -d ${{  github.ref_name }} && git push origin :refs/tags/${{  github.ref_name }}
           git tag  ${{  github.ref_name }}
