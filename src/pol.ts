@@ -155,8 +155,8 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                         const pendingPromises = [
                             ...Object.values(service.cli.before_onStart).map(s=>s.promise),
                             ...Object.values(service.cli.after_onStart).map(s=>s.promise),
-                            ...Object.values(service.cli.before_onStop).map(s=>s.promise),
-                            ...Object.values(service.cli.after_onStop).map(s=>s.promise),
+                            ...Object.values(service.cli.before_onLogin).map(s=>s.promise),
+                            ...Object.values(service.cli.after_onLogin).map(s=>s.promise),
                             service.exec.onStart?.promise,
                             service.exec.onLogin?.promise,
                         ];
