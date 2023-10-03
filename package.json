@@ -6,8 +6,7 @@
     "pol": "./bin/pol.js"
   },
   "scripts": {
-    "build": "webpack --mode production",
-    "publish": "npm run build && npm version from-git"
+    "build": "webpack --mode production"
   },
   "author": "ui3o.com",
   "license": "ISC",
