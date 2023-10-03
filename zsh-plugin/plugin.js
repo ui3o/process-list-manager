@@ -36,6 +36,9 @@ const menu = {
     "completion__initialize completion system for a shell": {
         "zsh": null,
     },
+    "ps__list running services": {
+        "--all__list all services": null,
+    },
     "boot__boot all service": null
 }
 
