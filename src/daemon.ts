@@ -174,11 +174,10 @@ class PolDaemonClass {
 
         const runChecker = () => {
             if (Object.keys(cli).length) {
-                if (interval[`${prePostState}_${state}`]) {
-                    logger.write(`         waiting ${prePostState} ${serviceName} ${runState} ...`);
-                } else {
+                if (!interval[`${prePostState}_${state}`]) {
                     interval[`${prePostState}_${state}`] = setInterval(runChecker, 2000);
                 }
+                logger.write(`         waiting ${prePostState} ${serviceName} ${runState} ...`);
             } else {
                 if (interval[`${prePostState}_${state}`]) {
                     interval[`${prePostState}_${state}`] = clearInterval(interval[`${prePostState}_${state}`]!);
@@ -301,6 +300,8 @@ class PolDaemonClass {
 
     setStateReady(serviceName: string) {
         this.srv[serviceName].state = this.SERVICE_STATE.READY.state;
+        this.srv[serviceName].running = false;
+
     }
 
 

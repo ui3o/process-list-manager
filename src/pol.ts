@@ -84,7 +84,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
             for (const service of pol.getServices()) {
                 if (serviceName !== "--all" && service.name !== serviceName) continue;
 
-                let serviceStartResolver;
+                let serviceStartResolver: POL_CLB_METHOD = () => { };
                 const srv = pol.get(service.name);
                 promiseAllService.push(new Promise(r => serviceStartResolver = r));
                 pol.stateInit(service.name);
@@ -92,7 +92,7 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                 try {
                     if (pol.getAllRunning().some(s => s.name === service.name)) {
                         logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${service.name} is already running ...`);
-                        pol.get(service.name)?.startResolver?.();
+                        serviceStartResolver();
                         continue;
                     }
                     if (srv.setup?.onStart) {
@@ -107,6 +107,8 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             pol.startRunChecker(service.name, 'after', 'onStart', 'started', logFile);
                         });
                         pol.startRunChecker(service.name, 'before', 'onStart', 'started', logger, serviceStartResolver);
+                    } else {
+                        serviceStartResolver();
                     }
                 } catch (error) {
                     logger.write(`[${term.fc.red}FAILED${term.mc.resetAll}] start ${service.name} ...`);
