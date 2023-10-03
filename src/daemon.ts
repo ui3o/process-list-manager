@@ -264,7 +264,7 @@ class PolDaemonClass {
         }
     }
 
-    delExec(serviceName: string, funcName: string, timestamp: number) {
+    delExec(serviceName: string, funcName: string) {
         switch (funcName) {
             case 'onStart':
             case 'onLogin':

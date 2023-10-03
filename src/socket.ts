@@ -74,7 +74,7 @@ export const serverCreate = async (onMsg = async (msg: minimist.ParsedArgs, stre
         toLog('Socket server: removing leftover socket.');
         fs.unlinkSync(SOCKETFILE);
     } else {
-        toLog('Socket sestringrver: no leftover socket found.');
+        toLog('Socket server: no leftover socket found.');
     }
     // close all connections when the user does CTRL-C
     process.on('exit', serverCleanup);
@@ -85,7 +85,7 @@ export const serverCreate = async (onMsg = async (msg: minimist.ParsedArgs, stre
 export const clientCleanup = () => {
     if (!SHUTDOWN && client) {
         SHUTDOWN = true;
-        toLog("Socket client: Terminating.");
+        // log.log("Socket client: Terminating.");
         client.end();
     }
 }

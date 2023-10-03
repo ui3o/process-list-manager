@@ -119,14 +119,14 @@ const execDo = (cmd: string[], serviceName: string) => {
     const promise = new Promise(res => {
         if (!options.it) {
             spawnCmd.stdout?.on('data', data => {
-                msgToLog(data, 'outexe');
+                msgToLog(data.toString(), 'outexe');
             });
             spawnCmd.stderr?.on('data', data => {
-                msgToLog(data, 'errexe');
+                msgToLog(data.toString(), 'errexe');
             });
         }
         spawnCmd.on('close', (c) => {
-            pol.delExec(serviceName, funcName!, timestamp);
+            pol.delExec(serviceName, funcName!);
             res(c);
         });
     });

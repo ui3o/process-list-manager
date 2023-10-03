@@ -188,6 +188,8 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             // set ready state for the next circle
                             setTimeout(() => {
                                 pol.setStateReady(srv.name);
+                                pol.delExec(srv.name, 'onLogin');
+                                pol.delExec(srv.name, 'onStart');
                             });
                         });
                     } catch (error) {
@@ -242,9 +244,11 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             socket.end();
                         } else {
                             await lookup();
-                            const success = await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, msg.force);
-                            if (success) await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
-                            socket.end();
+                            await stop(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket, msg.force);
+                            setTimeout(async () => {
+                                await start(msg._[1] ? msg._[1] : msg.all ? "--all" : null, socket);
+                                socket.end();
+                            });
                         }
                         break;
                 }
