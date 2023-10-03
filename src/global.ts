@@ -58,6 +58,8 @@ const cliGenerator = (controller: POL_SETUP_START | POL_SETUP_STOP, bindObject: 
     Object.defineProperty(controller.cli, 'splitAll', {
         get: function () { globalThis.service.__prop__.splitAll = true; return controller.cli; }
     });
+    controller.cli.gid = (gid = '') => { globalThis.service.__prop__.gid = gid; return controller.cli; };
+    controller.cli.uid = (uid = '') => { globalThis.service.__prop__.uid = uid; return controller.cli; };
     controller.cli.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.cli; };
     controller.cli.eol = (eol = '') => { globalThis.service.__prop__.eol = eol; return controller.cli; };
     controller.cli.do = function () {
@@ -77,6 +79,8 @@ const execGenerator = (controller: POL_SETUP_START, bindObject: any, type: any) 
         get: function () { globalThis.service.__prop__.it = true; return controller.exec; }
     });
 
+    controller.exec.gid = (gid = '') => { globalThis.service.__prop__.gid = gid; return controller.exec; };
+    controller.exec.uid = (uid = '') => { globalThis.service.__prop__.uid = uid; return controller.exec; };
     controller.exec.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.exec; };
     controller.exec.do = function () {
         return execDo([...arguments], (this as POL_SETUP).serviceName!)
@@ -100,7 +104,18 @@ const execDo = (cmd: string[], serviceName: string) => {
     //  multiple exec not allowed
     if (pol.isStateAfterDown(serviceName) || pol.get(serviceName).exec[funcName! as 'onStart' | 'onLogin'])
         return Promise.resolve();
-    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env, stdio: options.it ? 'inherit' : undefined });
+
+    if (options.gid) {
+        const gid = cliSplitByLineSync('id', '-g', `${options.gid}`);
+        options.gid = !gid.c ? Number(gid.o[0]) : undefined;
+    }
+
+    if (options.uid) {
+        const uid = cliSplitByLineSync('id', '-u', `${options.uid}`);
+        options.uid = !uid.c ? Number(uid.o[0]) : undefined;
+    }
+
+    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env, stdio: options.it ? 'inherit' : undefined, gid: options.gid, uid: options.uid });
     const promise = new Promise(res => {
         if (!options.it) {
             spawnCmd.stdout?.on('data', data => {
@@ -133,7 +148,18 @@ const cliDo = (cmd: string[], serviceName: string) => {
     }
     if (pol.isStateAfterDown(serviceName) && funcName != "onStop")
         return Promise.resolve();
-    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env });
+
+    if (options.gid) {
+        const gid = cliSplitByLineSync('id', '-g', `${options.gid}`);
+        options.gid = !gid.c ? Number(gid.o[0]) : undefined;
+    }
+
+    if (options.uid) {
+        const uid = cliSplitByLineSync('id', '-u', `${options.uid}`);
+        options.uid = !uid.c ? Number(uid.o[0]) : undefined;
+    }
+
+    const spawnCmd = spawn(prog!, params, { cwd: options.cwd, env, gid: options.gid, uid: options.uid });
     // cliRuns[setup.type][timestamp] = { prog, params };
     pol.addCli(serviceName, funcName!, timestamp, { prog, params });
     return new Promise(res => {
@@ -199,6 +225,15 @@ globalThis.service = {
     },
     __prop__: {},
 }
+
+export const cliSplitByLineSync = function (...args: any[]) {
+    const _cmd = [...arguments];
+
+    const spawnCmd = spawnSync(_cmd.shift(), [..._cmd]);
+    const _lines = spawnCmd.stdout.toString().split('\n').filter(l => l);
+
+    return { o: _lines, c: spawnCmd.status }
+};
 
 export const cliSplitByLine = function (...args: any[]) {
     const _cmd = [...arguments];

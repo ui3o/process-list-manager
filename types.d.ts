@@ -76,7 +76,7 @@ declare interface I_SS {
     /**
      * **send strings to log file:** send the given string parameters to log file.
      */
-    toLog: (...msg: string) => void;
+    toLog: (...msg: string[]) => void;
 
     /**
      * **interpreted shell script:** execute external **script** which is **interpreted** into **string**, inside spawn.
@@ -112,6 +112,16 @@ declare interface I_SS_STOP extends I_SS {
 
 declare interface I_EXEC {
     /**
+     * **uid** means set the process user
+     * @param uid number or string
+     */
+    uid(uid: string | number): I_EXEC;
+    /**
+     * **gid** means set the process group
+     * @param gid number or string
+     */
+    gid(gid: string | number): I_EXEC;
+    /**
      * **wd** means set the process working directory
      * @param wd path to working directory
      */
@@ -135,10 +145,20 @@ declare interface I_EXEC {
      * @param cmd string list the first parameter is the program name
      * @returns command result c(code) and o(output)
      */
-    do(...cmd: string): Promise<number>;
+    do(...cmd: string[]): Promise<number>;
 }
 
 declare interface I_CLI {
+    /**
+     * **uid** means set the process user
+     * @param uid number or string
+     */
+    uid(uid: string | number): I_CLI;
+    /**
+     * **gid** means set the process group
+     * @param gid number or string
+     */
+    gid(gid: string | number): I_CLI;
     /**
      * **wd** means set the process working directory
      * @param wd path to working directory
@@ -178,6 +198,6 @@ declare interface I_CLI {
      * @param cmd string list the first parameter is the program name
      * @returns command result c(code) and o(output)
      */
-    do(...cmd: string): Promise<{ o: string | Array<string> | Array<Array<string>>; c: number }>;
+    do(...cmd: string[]): Promise<{ o: string | Array<string> | Array<Array<string>>; c: number }>;
 }
 

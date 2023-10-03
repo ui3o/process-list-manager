@@ -40,6 +40,8 @@ export declare class POL_SETUP_CLI {
     splitByLine?: POL_SETUP_CLI
     splitAll?: POL_SETUP_CLI
     wd?: (wd: string) => POL_SETUP_CLI
+    gid?: (gid: string) => POL_SETUP_CLI
+    uid?: (uid: string) => POL_SETUP_CLI
     eol?: (eol: string) => POL_SETUP_CLI
     do?: POL_CLB_METHOD
 }
@@ -47,6 +49,8 @@ export declare class POL_SETUP_CLI {
 export declare class POL_SETUP_EXEC {
     it?: POL_SETUP_EXEC
     wd?: (wd: string) => POL_SETUP_EXEC
+    uid?: (uid: string) => POL_SETUP_EXEC
+    gid?: (gid: string) => POL_SETUP_EXEC
     do?: POL_CLB_METHOD
 }
 
