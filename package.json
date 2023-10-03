@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "webpack --mode production",
-    "create-patch": "npm run build && npm version patch"
+    "publish": "npm run build && npm version from-git"
   },
   "author": "ui3o.com",
   "license": "ISC",
