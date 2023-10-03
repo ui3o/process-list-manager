@@ -19,6 +19,8 @@ jobs:
           git commit -m "update version to: ${{  github.ref_name }}"
           git push origin HEAD:main
           git tag -d ${{  github.ref_name }} && git push origin :refs/tags/${{  github.ref_name }}
+          git tag  ${{  github.ref_name }} origin HEAD:main
+          git push --tags
       - uses: actions/setup-node@v1
         with:
           node-version: 18
