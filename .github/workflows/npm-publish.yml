@@ -17,7 +17,8 @@ jobs:
           npm --no-git-tag-version -f version from-git
           git add .
           git commit -m "update version to: ${{  github.ref_name }}"
-          git push
+          git push origin HEAD:main
+          git tag -d ${{  github.ref_name }} && git push origin :refs/tags/${{  github.ref_name }}
       - uses: actions/setup-node@v1
         with:
           node-version: 18
