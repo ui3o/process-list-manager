@@ -126,8 +126,8 @@ const execDo = (cmd: string[], serviceName: string) => {
             });
         }
         spawnCmd.on('close', (c) => {
-            pol.delExec(serviceName, funcName!);
             res(c);
+            pol.delExec(serviceName, funcName!);
         });
     });
     pol.addExec(serviceName, funcName!, timestamp, { prog, params, promise, options, timestamp })
@@ -172,8 +172,6 @@ const cliDo = (cmd: string[], serviceName: string) => {
         });
 
         spawnCmd.on('close', (c) => {
-            // delete cliRuns[setup.type][timestamp];
-            pol.delCli(serviceName, funcName!, timestamp);
             if (options.splitAll || options.splitByLine) {
                 const _lines = _out.split(options.eol ? options.eol : '\n').filter(l => l);
                 if (options.splitByLine) res({ o: _lines, c });
@@ -184,6 +182,7 @@ const cliDo = (cmd: string[], serviceName: string) => {
             }
             else
                 res({ o: _out, c });
+            pol.delCli(serviceName, funcName!, timestamp);
         });
     });
 }

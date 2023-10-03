@@ -152,6 +152,14 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                         new Promise(r => postStopResolver = r)];
 
                     const _stop = async (service: SERVICE_DEF) => {
+                        const pendingPromises = [
+                            ...Object.values(service.cli.before_onStart).map(s=>s.promise),
+                            ...Object.values(service.cli.after_onStart).map(s=>s.promise),
+                            ...Object.values(service.cli.before_onStop).map(s=>s.promise),
+                            ...Object.values(service.cli.after_onStop).map(s=>s.promise),
+                            service.exec.onStart?.promise,
+                            service.exec.onLogin?.promise,
+                        ];
                         let srv = "";
                         pol.stopRunChecker(service.name, 'Start');
                         for (const p of service.processes) {
@@ -166,7 +174,9 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                                 logger.write(`${headMsg} ${service.name} service with proc/pid[${p.procName}/${p.procId}] ...`);
                             }
                         }
+                        await Promise.all(pendingPromises);
                     }
+
                     promiseAllService.push(new Promise(r => (serviceStopResolver as any) = r));
                     try {
                         if (srv.setup?.onStop) {
@@ -179,8 +189,8 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             srv.setup.onStop(srv.setup.ssOnStop);
                             pol.startRunChecker(srv.name, 'before', 'onStop', 'stopped', logger, preStopResolver);
                         } else {
-                            preStopResolver(); postStopResolver();
                             await _stop(srv);
+                            preStopResolver(); postStopResolver();
                         }
 
                         Promise.all(promiseAllPrePostStopDone).then(() => {
@@ -188,8 +198,6 @@ export const polDaemon = async (argv: minimist.ParsedArgs) => {
                             // set ready state for the next circle
                             setTimeout(() => {
                                 pol.setStateReady(srv.name);
-                                pol.delExec(srv.name, 'onLogin');
-                                pol.delExec(srv.name, 'onStart');
                             });
                         });
                     } catch (error) {

@@ -254,12 +254,18 @@ class PolDaemonClass {
             case 'onStart':
             case 'onStop':
             case 'onLogin':
-                Object.keys(this.srv[serviceName].cli[`before_${funcName}`]).forEach(k => {
-                    delete this.srv[serviceName].cli[`before_${funcName}`][k]
-                });
-                Object.keys(this.srv[serviceName].cli[`after_${funcName}`]).forEach(k => {
-                    delete this.srv[serviceName].cli[`after_${funcName}`][k]
-                });
+                const isBefore = Object.keys(this.srv[serviceName].cli[`before_${funcName}`]).some(k => k === `${timestamp}`);
+                if (isBefore) {
+                    Object.keys(this.srv[serviceName].cli[`before_${funcName}`]).forEach(k => {
+                        if (k === `${timestamp}`)
+                            delete this.srv[serviceName].cli[`before_${funcName}`][k];
+                    });
+                } else {
+                    Object.keys(this.srv[serviceName].cli[`after_${funcName}`]).forEach(k => {
+                        if (k === `${timestamp}`)
+                            delete this.srv[serviceName].cli[`after_${funcName}`][k];
+                    });
+                }
                 break;
         }
     }
