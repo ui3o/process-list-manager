@@ -14,9 +14,7 @@ jobs:
           git config user.email github-actions@github.com
           npm install
           npm run build
-          git add .
-          git commit -m "auto build pol.js on version: ${{  github.ref_name }}"
-          npm version from-git
+          npm --no-git-tag-version -f version from-git
           git add .
           git commit -m "update version to: ${{  github.ref_name }}"
           git push
