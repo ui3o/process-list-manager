@@ -40,7 +40,7 @@ const menu = {
         "--all__list all services": null,
     },
     "daemon__manage daemon process": {
-        "--shutdown__shutdown daemon process": null,
+        "shutdown__shutdown daemon process": null,
     },
     "boot__boot all service": null
 }
