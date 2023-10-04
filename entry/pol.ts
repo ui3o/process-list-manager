@@ -3,9 +3,10 @@
 "use strict"
 import minimist from 'minimist';
 import packageJson from "../package.json";
-import { polDaemon } from "../src/pol";
+import { isServerCommand, polServer } from "../src/pol.server";
 import { printUsage } from "../src/usage";
-const argv= minimist(process.argv.slice(2));
+import { isClientCommand, polClient } from '../src/pol.client';
+const argv = minimist(process.argv.slice(2));
 
 export const help = () => {
     printUsage({
@@ -32,4 +33,10 @@ if (argv.h || argv.help) {
     help();
 }
 
-polDaemon(argv);
+if (isClientCommand(argv._[0])) {
+    polClient(argv);
+} else if (isServerCommand(argv._[0])) {
+    polServer(argv);
+} else {
+    help();
+}

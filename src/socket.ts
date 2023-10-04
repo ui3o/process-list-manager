@@ -2,8 +2,7 @@
 import fs from 'fs';
 import minimist from 'minimist';
 import net from 'net';
-import { log } from './global';
-import { msgToLog } from './logger';
+import { log, msgToLog } from './logger';
 
 const connections: {
     [name: string]: net.Socket
@@ -16,7 +15,7 @@ var server: net.Server, client: net.Socket;
 var SHUTDOWN = false;
 
 // Our socket
-const SOCKETFILE = '/tmp/pol.sock';
+const SOCKET_FILE = '/tmp/pol.sock';
 
 function _serverCreate(socket: string, onMsg = async (msg: minimist.ParsedArgs, stream: net.Socket) => { }) {
     toLog('Socket server: creating');
@@ -40,9 +39,11 @@ function _serverCreate(socket: string, onMsg = async (msg: minimist.ParsedArgs, 
                 // stream.write('qux'); // need to be call in place, can not reference to write function
             });
             stream.on('error', async (exc: any) => {
-               delete connections[self];
+                delete connections[self];
             });
-        }).listen(socket).on('connection', function (_socket) {
+        }).listen(socket, ()=>{
+            fs.chmodSync(socket, '777');
+        }).on('connection', function (_socket) {
             toLog('Socket server: client connected');
             sock = _socket;
             // _socket.write('__boop');// send to client immediately after connect
@@ -70,15 +71,15 @@ export const serverCreate = async (onMsg = async (msg: minimist.ParsedArgs, stre
     // check for failed cleanup
     toLog('Socket server: checking for leftover socket');
 
-    if (fs.existsSync(SOCKETFILE)) {
+    if (fs.existsSync(SOCKET_FILE)) {
         toLog('Socket server: removing leftover socket.');
-        fs.unlinkSync(SOCKETFILE);
+        fs.unlinkSync(SOCKET_FILE);
     } else {
         toLog('Socket server: no leftover socket found.');
     }
     // close all connections when the user does CTRL-C
     process.on('exit', serverCleanup);
-    return _serverCreate(SOCKETFILE, onMsg);
+    return _serverCreate(SOCKET_FILE, onMsg);
 }
 
 
@@ -95,7 +96,7 @@ export const clientCreate = () => {
     // log.log("Socket client: connecting to server");
     process.on('exit', clientCleanup);
     return new Promise<net.Socket>((resolve) => {
-        client = net.createConnection(SOCKETFILE)
+        client = net.createConnection(SOCKET_FILE)
             .on('connect', () => {
                 // log.log("Socket client: connected");
                 resolve(client);
@@ -108,7 +109,7 @@ export const clientCreate = () => {
                 //     client.write('__snootbooped');
             })
             .on('error', function (data) {
-                log.log('pol daemon not running. run `pol boot` first!'); process.exit(1);
+                log.log('pol daemon not running. run `pol boot` first!', data); process.exit(1);
             }).on('close', function (data) {
                 // log.log('Server closed.'); process.exit(1);
             });

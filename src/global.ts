@@ -1,27 +1,11 @@
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import packageJson from "../package.json";
-import { POL_LOGGER, POL_SETUP, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
-import { LOG_FILE_PATH, LOG_FILE_ROOT, msgToLog } from './logger';
+import { POL_SETUP, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
+import { LOG_FILE_PATH, LOG_FILE_ROOT, log, msgToLog } from './logger';
+import { cliSplitByLineSync } from './spawn';
 import { term } from './term';
 
-
-// log setup
-export const TASK_INDENT = `        `;
-export const log: POL_LOGGER = {
-    write: console.log,
-    log: console.log,
-    warn: console.warn,
-    err: console.error,
-    end: () => { }
-};
-
-
-// log file setup
-function cli(...args: string[]) {
-    const cmd = [...arguments];
-    spawnSync(cmd.shift(), [...cmd], { encoding: 'utf-8', stdio: 'ignore' });
-}
 if (!fs.existsSync(LOG_FILE_PATH)) {
     try {
         fs.accessSync(LOG_FILE_ROOT, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
@@ -29,17 +13,17 @@ if (!fs.existsSync(LOG_FILE_PATH)) {
         log.log(`[${term.fc.red}REQUIRED${term.mc.resetAll}] Please create '/var/log/pol' folder with 'rw' access for the running user!`);
         process.exit(1);
     }
-    cli(`touch`, LOG_FILE_PATH);
+    cliSplitByLineSync(`touch`, LOG_FILE_PATH);
 }
 
 // zsh plugin setup
 const polPluginFolder = `${process.env.ZSH}/custom/plugins/pol`;
 const polPluginVersion = `${polPluginFolder}/pol.plugin.${packageJson.version}.version`;
 if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh') && !fs.existsSync(polPluginVersion)) {
-    cli(`mkdir`, `-p`, `${polPluginFolder}`);
-    cli(`touch`, polPluginVersion);
-    cli(`cp`, `${__dirname}/../zsh-plugin/pol.plugin.zsh`, `${polPluginFolder}/pol.plugin.zsh`);
-    cli(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
+    cliSplitByLineSync(`mkdir`, `-p`, `${polPluginFolder}`);
+    cliSplitByLineSync(`touch`, polPluginVersion);
+    cliSplitByLineSync(`cp`, `${__dirname}/../zsh-plugin/pol.plugin.zsh`, `${polPluginFolder}/pol.plugin.zsh`);
+    cliSplitByLineSync(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
     log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
 }
 
@@ -223,62 +207,4 @@ globalThis.service = {
         pol.setSetup(_setup.serviceName!, _setup);
     },
     __prop__: {},
-}
-
-export const cliSplitByLineSync = function (...args: any[]) {
-    const _cmd = [...arguments];
-
-    const spawnCmd = spawnSync(_cmd.shift(), [..._cmd]);
-    const _lines = spawnCmd.stdout.toString().split('\n').filter(l => l);
-
-    return { o: _lines, c: spawnCmd.status }
-};
-
-export const cliSplitByLine = function (...args: any[]) {
-    const _cmd = [...arguments];
-
-    const spawnCmd = spawn(_cmd.shift(), [..._cmd]);
-    return new Promise<{ o: string[], c: number }>(res => {
-        let _out = '';
-        spawnCmd.stdout.on('data', data => {
-            _out += data;
-        });
-        spawnCmd.stderr.on('data', data => {
-            _out += data;
-        });
-        spawnCmd.on('close', (c: number) => {
-            const _lines = _out.split('\n').filter(l => l);
-            res({ o: _lines, c });
-        });
-    });
-};
-
-export const logFile: POL_LOGGER = {
-    write: msgToLog,
-    log: () => { },
-    warn: () => { },
-    err: () => { },
-    end: () => { }
-};
-
-console.log = console["log"].bind(global.console, TASK_INDENT);
-console.warn = console["warn"].bind(global.console, TASK_INDENT);
-console.error = console["error"].bind(global.console, TASK_INDENT);
-
-declare global {
-    interface Date {
-        ISOStrings: () => string
-    }
-}
-
-// Date overrides
-Date.prototype.ISOStrings = function () {
-    const tzo = -this.getTimezoneOffset();
-    const dif = tzo >= 0 ? '+' : '-';
-    const pad = function (num: number) {
-        return (num < 10 ? '0' : '') + num;
-    };
-    const zone = dif + pad(Math.floor(Math.abs(tzo) / 60)) + ':' + pad(Math.abs(tzo) % 60)
-    this.setTime(this.getTime() + (tzo * 60 * 1000));
-    return this.toISOString().replace('Z', zone);
 }

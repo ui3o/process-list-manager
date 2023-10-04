@@ -3,7 +3,8 @@
   "version": "1.1.4",
   "description": "Nodejs based init system called process list manager - pol",
   "bin": {
-    "pol": "./bin/pol.js"
+    "pol": "./bin/pol.js",
+    "pol_init": "./wrapper/init.py"
   },
   "scripts": {
     "build": "webpack --mode production",
