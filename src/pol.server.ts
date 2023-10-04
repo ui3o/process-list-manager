@@ -147,6 +147,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 			logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${serviceName} is already stopped ...`);
 			return;
 		}
+		const stoppedServices = pol.getAllStopped().map(s => { return { name: s.name } });
 		if (serviceName === '--all') {
 			for (const srv of pol.getServices()) {
 				pol.setStateDown(srv.name);
@@ -222,7 +223,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 				}
 			}
 			if (serviceName === '--all') {
-				for (const s of pol.getAllStopped()) {
+				for (const s of stoppedServices) {
 					logger.write(`[${term.fc.yellow} WARN ${term.mc.resetAll}] ${s.name} is already stopped ...`);
 				}
 			}
@@ -234,6 +235,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 
 	let RUNNING = true;
 	process.on("SIGINT", async () => {
+		log.log('SIGINT rec')
 		if (RUNNING) {
 			RUNNING = false;
 			await lookup();
