@@ -39,6 +39,9 @@ const menu = {
     "ps__list running services": {
         "--all__list all services": null,
     },
+    "daemon__manage daemon process": {
+        "--shutdown__shutdown daemon process": null,
+    },
     "boot__boot all service": null
 }
 

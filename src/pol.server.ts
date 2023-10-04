@@ -252,23 +252,32 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 			await serverCreate(async (msg: minimist.ParsedArgs, socket: net.Socket) => {
 
 				switch (msg._[0]) {
-					case "kill":
-						log.log(`kill called`)
+					case ClientCommand.daemon:
 						if (!msg._.length || (msg._.length < 2)) {
 							socket.write(POSSIBLE_OPTIONS_MSG);
 							socket.end();
 						} else {
-							log.log(`kill param`, msg._[1])
-
-							const kill = async (pid: string) => {
-								const { c } = await cliSplitByLine(`kill`, `${pid}`);
-								log.log(`after kill`, c)
+							switch (msg._[1]) {
+								case "shutdown":
+									const logger: POL_LOGGER = {
+										err: () => { },
+										warn: () => { },
+										log: () => { },
+										write: (msg: string) => {
+											log.write(msg);
+											socket.write(msg);
+										},
+										end: () => { }
+									};
+									await lookup();
+									await stop("--all", logger);
+									socket.end();
+									serverCleanup();
+									break;
 							}
-							await kill(msg._[1]);
-							socket.end();
 						}
 						break;
-					case "stop":
+					case ClientCommand.stop:
 						if (!msg._.length || (msg._.length < 2 && !msg.all)) {
 							socket.write(POSSIBLE_OPTIONS_MSG);
 							socket.end();
@@ -278,7 +287,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 							socket.end();
 						}
 						break;
-					case "start":
+					case ClientCommand.start:
 						if (!msg._.length || (msg._.length < 2 && !msg.all)) {
 							socket.write(POSSIBLE_OPTIONS_MSG);
 							socket.end();
@@ -288,7 +297,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 							socket.end();
 						}
 						break;
-					case "restart":
+					case ClientCommand.restart:
 						if (!msg._.length || (msg._.length < 2 && !msg.all)) {
 							socket.write(POSSIBLE_OPTIONS_MSG);
 							socket.end();
@@ -301,7 +310,7 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 							});
 						}
 						break;
-					case "ps":
+					case ClientCommand.ps:
 						await lookup();
 						let srvName = "";
 						for (const srv of pol.getAllRunning()) {
@@ -360,15 +369,6 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 					log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
 				}
 			}
-			break;
-		case ClientCommand.ps:
-		case ClientCommand.kill:
-		case ClientCommand.stop:
-		case ClientCommand.start:
-		case ClientCommand.restart:
-			const client = await clientCreate();
-			client.write(JSON.stringify(argv));
-			// clientCleanup();
 			break;
 		default:
 			help();

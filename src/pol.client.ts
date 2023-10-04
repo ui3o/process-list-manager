@@ -8,7 +8,7 @@ import { term } from './term';
 export enum ClientCommand {
     "completion" = "completion",
     "ps" = "ps",
-    "kill" = "kill",
+    "daemon" = "daemon",
     "stop" = "stop",
     "start" = "start",
     "restart" = "restart",
@@ -35,7 +35,7 @@ export const polClient = async (argv: minimist.ParsedArgs) => {
             }
             break;
         case ClientCommand.ps:
-        case ClientCommand.kill:
+        case ClientCommand.daemon:
         case ClientCommand.stop:
         case ClientCommand.start:
         case ClientCommand.restart:
