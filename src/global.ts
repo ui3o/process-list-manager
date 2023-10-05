@@ -5,6 +5,7 @@ import { POL_SETUP, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
 import { LOG_FILE_PATH, LOG_FILE_ROOT, log, msgToLog } from './logger';
 import { cliSplitByLineSync } from './spawn';
 import { term } from './term';
+import { zshCompletionInit } from './pol.client';
 
 if (!fs.existsSync(LOG_FILE_PATH)) {
     try {
@@ -20,11 +21,8 @@ if (!fs.existsSync(LOG_FILE_PATH)) {
 const polPluginFolder = `${process.env.ZSH}/custom/plugins/pol`;
 const polPluginVersion = `${polPluginFolder}/pol.plugin.${packageJson.version}.version`;
 if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh') && !fs.existsSync(polPluginVersion)) {
-    cliSplitByLineSync(`mkdir`, `-p`, `${polPluginFolder}`);
     cliSplitByLineSync(`touch`, polPluginVersion);
-    cliSplitByLineSync(`cp`, `${__dirname}/../zsh-plugin/pol.plugin.zsh`, `${polPluginFolder}/pol.plugin.zsh`);
-    cliSplitByLineSync(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
-    log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
+    zshCompletionInit();
 }
 
 // generate standard cli and toLog objects

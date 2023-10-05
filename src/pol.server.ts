@@ -363,17 +363,6 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 				}
 			}
 			break;
-		case ClientCommand.completion:
-			if (argv._[1] === 'zsh') {
-				if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh')) {
-					const polPluginFolder = `${process.env.ZSH}/custom/plugins/pol`;
-					await cliSplitByLine(`mkdir`, `-p`, `${polPluginFolder}`);
-					await cliSplitByLine(`cp`, `${__dirname}/../zsh-plugin/pol.plugin.zsh`, `${polPluginFolder}/pol.plugin.zsh`);
-					await cliSplitByLine(`cp`, `${__dirname}/../zsh-plugin/plugin.js`, `${polPluginFolder}/plugin.js`);
-					log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
-				}
-			}
-			break;
 		default:
 			help();
 			break;
