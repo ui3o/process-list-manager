@@ -32,6 +32,8 @@ export const isServerCommand = (cmd: string) => {
 
 export const polServer = async (argv: minimist.ParsedArgs) => {
 
+	process.env.TZ = process.env.TZ ? process.env.TZ : fs.readFileSync('/etc/timezone').toString().split('\n')[0];
+
 	logFileInit();
 
 	const lookup = async () => {

@@ -27,10 +27,6 @@ if (process.env.ZSH && process.env.ZSH.endsWith('.oh-my-zsh') && !fs.existsSync(
     log.log(`[${term.fc.green}  INFO  ${term.mc.resetAll}] .oh-my-zsh custom plugin installed. Please add 'pol' to enabled plugin list in '~/.zshrc' file.`);
 }
 
-// TODO service state
-process.env.TZ = process.env.TZ ? process.env.TZ : fs.readFileSync('/etc/timezone').toString().split('\n')[0];
-
-
 // generate standard cli and toLog objects
 const cliGenerator = (controller: POL_SETUP_START | POL_SETUP_STOP, bindObject: any, type: any) => {
     Object.defineProperty(controller.cli, 'noErr', {
