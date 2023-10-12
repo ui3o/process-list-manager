@@ -237,7 +237,6 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 
 	let RUNNING = true;
 	process.on("SIGINT", async () => {
-		log.log('SIGINT rec')
 		if (RUNNING) {
 			RUNNING = false;
 			await lookup();
