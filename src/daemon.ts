@@ -12,13 +12,19 @@ export declare class POL_SETUP {
     onLogin?: (ss: POL_SETUP_START) => Promise<any>
 }
 
-export declare class POL_SETUP_START {
+export declare class POL_SETUP_CORE {
+    env: {
+        [key: string]: string | undefined
+    }
+}
+
+export declare class POL_SETUP_START extends POL_SETUP_CORE {
     cli: POL_SETUP_CLI
     exec: POL_SETUP_EXEC
     toLog?: (str: string) => any
 }
 
-export declare class POL_SETUP_STOP {
+export declare class POL_SETUP_STOP extends POL_SETUP_CORE {
     cli: POL_SETUP_CLI
     stopAll?: () => Promise<void>
     toLog?: (str: string) => any

@@ -15,7 +15,6 @@ const POL_DAEMON_RUNNING_MSG = `Another pol daemon is running!`;
 const POSSIBLE_OPTIONS_MSG = `possible options: [--all|service_name.service]`;
 const POL_CONFIG_FOLDER = process.env.POL_CONFIG_FOLDER ? [process.env.POL_CONFIG_FOLDER] : ["/etc/pol"];
 POL_CONFIG_FOLDER.push(`${os.homedir()}/.config/pol`);
-const envs = { ...process.env };
 
 enum ServerCommand {
 	boot = "boot"
@@ -113,8 +112,9 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 						continue;
 					}
 					if (srv.setup?.onStart) {
-						process.env = {
-							...envs,
+						// todo custom env az await miatt
+						srv.setup.ssOnStart.env = {
+							...srv.setup.ssOnStart.env,
 							POL: `__POL__${service.name}__${pol.getNanoSecTime()}__POL__`
 						};
 						logger.write(`[${term.fc.green}  OK  ${term.mc.resetAll}] start ${service.name} ...`);
@@ -346,10 +346,13 @@ export const polServer = async (argv: minimist.ParsedArgs) => {
 				if (pol.isStateAfterDown(pol.getLoginService()?.name!))
 					await logout();
 				else {
-					process.env = {
-						...envs,
-						POL: `__POL__${pol.getLoginService()?.name}__${pol.getNanoSecTime()}__POL__`
-					};
+					const login = pol.getLoginService()?.setup?.ssOnLogin;
+					if (login) {
+						login.env = {
+							...login.env,
+							POL: `__POL__${pol.getLoginService()?.name}__${pol.getNanoSecTime()}__POL__`
+						};
+					}
 					pol.getLoginService()?.setup?.onLogin?.(pol.getLoginService()?.setup?.ssOnLogin!).then(async () => {
 						if (pol.getLoginService()?.exec.onLogin) {
 							pol.getLoginService()?.exec?.onLogin?.promise?.then(async () => {

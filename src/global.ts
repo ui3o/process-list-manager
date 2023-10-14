@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import packageJson from "../package.json";
-import { POL_SETUP, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
+import { POL_SETUP, POL_SETUP_CORE, POL_SETUP_START, POL_SETUP_STOP, pol } from './daemon';
 import { LOG_FILE_PATH, LOG_FILE_ROOT, log, msgToLog } from './logger';
 import { cliSplitByLineSync } from './spawn';
 import { term } from './term';
@@ -41,7 +41,7 @@ const cliGenerator = (controller: POL_SETUP_START | POL_SETUP_STOP, bindObject: 
     controller.cli.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.cli; };
     controller.cli.eol = (eol = '') => { globalThis.service.__prop__.eol = eol; return controller.cli; };
     controller.cli.do = function () {
-        return cliDo([...arguments], (this as POL_SETUP).serviceName!)
+        return cliDo([...arguments], (this as POL_SETUP).serviceName!, controller)
     }
     controller.toLog = function (str: string) {
         msgToLog(str);
@@ -61,13 +61,13 @@ const execGenerator = (controller: POL_SETUP_START, bindObject: any, type: any) 
     controller.exec.uid = (uid = '') => { globalThis.service.__prop__.uid = uid; return controller.exec; };
     controller.exec.wd = (wd = '') => { globalThis.service.__prop__.cwd = wd; return controller.exec; };
     controller.exec.do = function () {
-        return execDo([...arguments], (this as POL_SETUP).serviceName!)
+        return execDo([...arguments], (this as POL_SETUP).serviceName!, controller)
     }
     // bind service name
     controller.exec.do = controller.exec.do.bind({ ...bindObject, type, controller });
 }
 
-const execDo = (cmd: string[], serviceName: string) => {
+const execDo = (cmd: string[], serviceName: string, controller: POL_SETUP_CORE) => {
     const prog = cmd.shift();
     const params = [...cmd];
     const timestamp = pol.getNanoSecTime();
@@ -75,7 +75,7 @@ const execDo = (cmd: string[], serviceName: string) => {
     let options = { ...globalThis.service.__prop__ };
     globalThis.service.__prop__ = {};
     const env = {
-        ...process.env,
+        ...controller.env,
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__EXEC__POL_CL__`
     }
 
@@ -112,7 +112,7 @@ const execDo = (cmd: string[], serviceName: string) => {
     return promise;
 }
 
-const cliDo = (cmd: string[], serviceName: string) => {
+const cliDo = (cmd: string[], serviceName: string, controller: POL_SETUP_CORE) => {
     const lines: string[][] = [];
     const prog = cmd.shift();
     const params = [...cmd];
@@ -121,7 +121,7 @@ const cliDo = (cmd: string[], serviceName: string) => {
     let options = { ...globalThis.service.__prop__ };
     globalThis.service.__prop__ = {};
     const env = {
-        ...process.env,
+        ...controller.env,
         POL_CL_ENV: `__POL_CL__${prog}__${timestamp}__CLI__POL_CL__`
     }
     if (pol.isStateAfterDown(serviceName) && funcName != "onStop")
@@ -173,6 +173,7 @@ declare const globalThis: {
     service: any;
 };
 
+const envs = { ...process.env };
 
 globalThis.service = {
     set setup(setup: POL_SETUP) {
@@ -180,13 +181,16 @@ globalThis.service = {
             ...setup,
             serviceName: (new Error().stack?.split("at ")[2])?.trim().split('.js:')[0].replace(/.*\//, ''),
             ssOnStart: {
+                env: { ...envs },
                 cli: {},
                 exec: {}
             },
             ssOnStop: {
+                env: { ...envs },
                 cli: {},
             },
             ssOnLogin: {
+                env: { ...envs },
                 cli: {},
                 exec: {}
             }
