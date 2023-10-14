@@ -1,6 +1,6 @@
 {
   "name": "process-list-manager",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Nodejs based init system called process list manager - pol",
   "bin": {
     "pol": "./bin/pol.js",
